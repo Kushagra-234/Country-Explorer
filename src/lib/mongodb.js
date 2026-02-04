@@ -1,26 +1,32 @@
 import { MongoClient } from "mongodb";
 import mongoose from "mongoose";
 
-const uri = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI || "";
 const options = {};
 
 let client;
 let clientPromise;
 
-if (process.env.NODE_ENV === "development") {
-  if (!global.storedMongoClient) {
+if (uri) {
+  if (process.env.NODE_ENV === "development") {
+    if (!global.storedMongoClient) {
+      client = new MongoClient(uri, options);
+      global.storedMongoClient = client.connect();
+    }
+    clientPromise = global.storedMongoClient;
+  } else {
     client = new MongoClient(uri, options);
-    global.storedMongoClient = client.connect();
+    clientPromise = client.connect();
   }
-  clientPromise = global.storedMongoClient;
-} else {
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect();
 }
 
 let isConnected = false;
 
 export const connectToDatabase = async () => {
+  if (!uri) {
+    throw new Error("MONGODB_URI environment variable is not set");
+  }
+
   if (isConnected) {
     return mongoose.connection.db;
   }
